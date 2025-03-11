@@ -22,3 +22,14 @@
     build:
       context: .
       dockerfile: DynamicMapService/Dockerfile
+      
+  goalQueue:
+    container_name: goalQueue
+    image: rabbitmq:latest
+    ports:
+      - "5672:5672"
+    volumes:
+      - goalQueue:/var/lib/goalQueue
+        
+volumes:
+  goalQueue:
