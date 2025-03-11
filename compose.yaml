@@ -1,0 +1,18 @@
+﻿services:
+  movementservice:
+    image: movementservice
+    build:
+      context: .
+      dockerfile: MovementService/Dockerfile
+
+  mapservice:
+    image: mapservice
+    build:
+      context: .
+      dockerfile: MapService/Dockerfile
+
+  centralservice:
+    image: centralservice
+    build:
+      context: .
+      dockerfile: CentralService/Dockerfile
