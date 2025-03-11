@@ -16,3 +16,9 @@
     build:
       context: .
       dockerfile: CentralService/Dockerfile
+
+  dynamicmapservice:
+    image: dynamicmapservice
+    build:
+      context: .
+      dockerfile: DynamicMapService/Dockerfile
