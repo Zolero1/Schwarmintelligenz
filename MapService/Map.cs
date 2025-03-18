@@ -1,14 +1,29 @@
-﻿namespace MapService;
+﻿using System;
+using System.IO;
 
-public class Map
+namespace MapService
 {
-    public Place[,] MapArray { get; set; } = new Place[200, 200];
-    
-    
-    public Map()
+    public class Map<T> 
     {
-        //read map from csv and save to MapArray
+        public T[,] MapArray { get; set; } = new T[200, 200];
+
+        public Map(string filePath, Func<string, T> parser)
+        {
+            LoadMapFromCSV(filePath, parser);
+        }
+
+        private void LoadMapFromCSV(string filePath, Func<string, T> parser)
+        {
+           string[] lines = File.ReadAllLines(filePath);
+           for (int i = 0; i < 200; i++)
+           {
+               string[] values = lines[i].Split(',');
+               for (int j = 0; j < 200; j++)
+               {
+                       MapArray[i, j] = parser(values[j]);
+
+               }
+           }
+        }
     }
-    
-    
 }
