@@ -25,9 +25,10 @@
       
   goalQueue:
     container_name: goalQueue
-    image: rabbitmq:latest
+    image: rabbitmq:3-management
     ports:
       - "5672:5672"
+      - "15672:15672"
     volumes:
       - goalQueue:/var/lib/goalQueue
         

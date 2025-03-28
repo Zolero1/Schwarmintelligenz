@@ -1,50 +1,59 @@
 using System.Text;
+using GlobalUsings;
 using RabbitMQ.Client;
 
 namespace CentralService;
 
-public class RabbitQueueSender
+public class RabbitQueueSender : IDisposable
 {
-    private  IConnection _connection;
-    private  IChannel _channel;
-    private  string _queueName = "commandQueue";
-    
-    public async Task Initiate()
-    {
-        var factory = new ConnectionFactory()
-        {
-            Uri = new Uri("amqp://guest:guest@localhost:5672/")
-        };
-        
-        
-        _connection = await factory.CreateConnectionAsync();
-        _channel = await _connection.CreateChannelAsync();
+    private  IModel _channel;
 
-        await _channel.QueueDeclareAsync(queue: _queueName,
+    public RabbitQueueSender()
+    {
+        _channel = RabbitMQPersistentConnection.Instance.GetChannel();
+        SendMessages("Test");
+    }
+    
+    
+    /*public async Task Initiate()
+    {
+        var factory = new ConnectionFactory { HostName = "goalQueue", Port = 5672};
+        _connection = factory.CreateConnection();
+        _channel = _connection.CreateModel();
+
+        _channel.QueueDeclare(queue: _queueName,
             durable: false,
             exclusive: false,
             autoDelete: false,
             arguments: null);
-    }
+    }*/
 
-    public async Task SendMessages(string[] messages)
+    public void SendMessages(string[] messages)
     {
-        await _channel.ExchangeDeclareAsync(exchange: "logs", type: ExchangeType.Fanout);
         foreach (var message in messages)
         {
             var body = Encoding.UTF8.GetBytes(message);
 
-            await _channel.BasicPublishAsync(exchange: "logs", routingKey: "hello", body: body);
+            _channel.BasicPublish(exchange: "",  routingKey: RabbitMQPersistentConnection.Instance.GetQueueName(), body: body);
 
             Console.WriteLine($"Sent: {message}");
         }
     }
-    public async Task SendMessages(string message)
+    public void SendMessages(string message)
     {
         var body = Encoding.UTF8.GetBytes(message);
 
-        await _channel.BasicPublishAsync(exchange: string.Empty, routingKey: "hello", body: body);
+        _channel.BasicPublish(exchange: string.Empty, routingKey: RabbitMQPersistentConnection.Instance.GetQueueName(), body: body);
 
         Console.WriteLine($"Sent: {message}");
     }
+
+    public IModel GetChannel() => _channel;
+
+    public void Dispose()
+    {
+        _channel?.Close();
+    }
 }
+
+
