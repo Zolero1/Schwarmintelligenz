@@ -1,5 +1,4 @@
-﻿
-namespace MovementService;
+﻿namespace MovementService;
 
 public class Drone
 {
@@ -9,6 +8,7 @@ public class Drone
 
     public Drone()
     {
+        GetStartingPosition();
         Subscribe();
         // finds a place to spawn
     }
@@ -22,6 +22,11 @@ public class Drone
         
         //update current position 
         // aggregation towards goal
+    }
+
+    public Point GetStartingPosition()
+    {
+        throw new NotImplementedException();
     }
 
     public void Subscribe() // wird am anfang schon gemacht wenn die drone erstellt wird, sie subsribt der queue
