@@ -1,4 +1,6 @@
-﻿namespace MovementService;
+﻿
+namespace GlobalUsings;
+
 public class Point
 {
     public int X { get; set; }

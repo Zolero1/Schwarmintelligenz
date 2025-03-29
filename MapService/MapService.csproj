@@ -17,4 +17,8 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\GlobalUsings\GlobalUsings.csproj" />
+    </ItemGroup>
+
 </Project>

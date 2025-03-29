@@ -1,4 +1,6 @@
-﻿namespace MovementService;
+﻿using GlobalUsings;
+
+namespace MovementService;
 
 public class Drone
 {
@@ -12,12 +14,18 @@ public class Drone
         Subscribe();
         // finds a place to spawn
     }
-    public void Move() //Drone bewegen
+    public void Move() //Drone bewegen //immer ausführen 
     {
         //schauen wo was frei ist 
+        //call request an dynamic 
+        // call an static ->
+        // schauen dass wir über seehöhe fliegen und nicht in den felsen einfahren
+        // die erde ist ja kein brett
         
         
         //schauen was davon am ehesten zum ziel führt 
+        
+        // wenn gar nix weiter hilft mal bissl warten 
         
         
         //update current position 
@@ -39,6 +47,9 @@ public class Drone
         
     }
     
+    
+    //TODO Wo soll man distance to hin tun? Point oder Drone? Wäre ja dumm wenn der punkt rausfinden soll wie weiter er zum kollegen hat
+    
     public double DistanceTo(Point other, Point goal)
     {
         return Math.Sqrt(
@@ -50,6 +61,9 @@ public class Drone
     
     public Point FindClosestPoint(Point goal, List<Point> points)
     {
-        return points.OrderBy(p => p.DistanceTo(goal)).First();
+            return points
+                .Select(p => new { Point = p, Distance = DistanceTo(p, goal) }) // Create an anonymous type with point & distance
+                .OrderBy(p => p.Distance) // Sort by distance (ascending)
+                .First().Point; // Select the closest point
     }
 }
