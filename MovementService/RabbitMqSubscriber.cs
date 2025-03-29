@@ -14,58 +14,85 @@ using RabbitMQ.Client.Events;
 
 namespace MovementService;
 
-public class RabbitMqSubscriber : BackgroundService 
+public class RabbitMqSubscriber : IDisposable
 {
-    private IModel _channel;
-
-    public RabbitMqSubscriber()
-    {
-        _channel = RabbitMQPersistentConnection.Instance.GetChannel();
-    }
+    private readonly IModel _channel;
+    private readonly string _queueName; // Unique for each subscriber
     
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public event EventHandler<Point> MessageReceived;
+    
+    public RabbitMqSubscriber(EventHandler<Point> messageReceived)
     {
-        if (_channel == null)
-        {
-            throw new InvalidOperationException("RabbitMQ channel is not initialized.");
-        }
+        MessageReceived = messageReceived;
+        _channel = RabbitMQPersistentConnection.Instance.GetChannel();
         
-        // This is where the background task runs, continually consuming messages
-        stoppingToken.Register(()=> _channel.Close());
+        // Create a unique anonymous queue for this subscriber
+        _queueName = _channel.QueueDeclare(
+            queue: "", // Let RabbitMQ generate a unique name
+            exclusive: true // Auto-delete when disconnected
+        ).QueueName;
+    }
+
+    public void StartListening()
+    {
+        _channel.QueueBind(
+            queue: _queueName, // Use the unique queue
+            exchange: RabbitMQPersistentConnection.Instance.ExchangeName,
+            routingKey: RabbitMQPersistentConnection.Instance.DroneRoutingKey // Fanout ignores routing keys
+        );
 
         var consumer = new AsyncEventingBasicConsumer(_channel);
-
-        consumer.Received += (model, ea) =>  
+        consumer.Received += async (model, ea) =>
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
             Console.WriteLine($"[Consumer] Received: {message}");
             
-            List<string> coordinats = message.Split(',').ToList();
-            if (coordinats.Count == 3)
+            var coordinates = message.Split(',');
+            if (coordinates.Length == 3)
             {
-                // TODO Dronenwert Anpassen
+                try
+                {
+                    int X = int.Parse(coordinates[0]);
+                    int Y = int.Parse(coordinates[1]);
+                    int Z = int.Parse(coordinates[2]);
+                    if (X > 0 && Y > 0 && Z > 0 && X < 200 && Y < 200)
+                    {
+                        var point = new Point
+                        {
+                            X = X,
+                            Y = Y,
+                            Z = Z
+                        };
+                        MessageReceived?.Invoke(this, point);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Consumer] Invalid coordinates: {coordinates[0]}, {coordinates[1]}, {coordinates[2]}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Keine Int Werte eingegeben");
+                    throw;
+                }
             }
             else
             {
-                Console.WriteLine($"Message {message} could not be processed. Not in the correct format: int,int,int");
+                Console.WriteLine($"Invalid message format: {message}");
             }
-            
-            return Task.CompletedTask;
         };
         
-        try
-        {
-            _channel.BasicConsume(queue: RabbitMQPersistentConnection.Instance.GetQueueName(),
-                autoAck: true,
-                consumer: consumer);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        await Task.CompletedTask;
-    }  
+        _channel.BasicConsume(
+            queue: _queueName,
+            autoAck: true,
+            consumer: consumer
+        );
+    }
+
+    public void Dispose() => _channel?.Dispose();
 }
+
+
 
 

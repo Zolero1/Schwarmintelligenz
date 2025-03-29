@@ -32,7 +32,7 @@ public class UserInputService : BackgroundService
 
             if (!string.IsNullOrWhiteSpace(input))
             {
-                _rabbitQueueSender.SendMessages(input);
+                _rabbitQueueSender.SendToCentral(input);
                 _logger.LogInformation($"Sent: {input}");
             }
         }

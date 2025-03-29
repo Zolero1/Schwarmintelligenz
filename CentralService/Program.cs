@@ -14,9 +14,10 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<RabbitMQPersistentConnection>();
         services.AddSingleton<RabbitQueueSender>();
         services.AddHostedService<UserInputService>();
+        //services.AddHostedService<RabbitMqReceiver>();
     })
     .Build();
-
+new RabbitMqReceiver();
 /*RabbitQueueSender rabbitQueueSender = host.Services.GetRequiredService<RabbitQueueSender>();
 while (true)
 {

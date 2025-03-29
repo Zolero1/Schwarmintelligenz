@@ -13,6 +13,9 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+      <Content Include="obj\Debug\net9.0\DroneService.GeneratedMSBuildEditorConfig.editorconfig" />
+      <Content Include="obj\DroneService.csproj.nuget.g.props" />
+      <Content Include="obj\DroneService.csproj.nuget.g.targets" />
     </ItemGroup>
 
     <ItemGroup>

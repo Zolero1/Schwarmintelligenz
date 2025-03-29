@@ -11,7 +11,6 @@ public class RabbitQueueSender : IDisposable
     public RabbitQueueSender()
     {
         _channel = RabbitMQPersistentConnection.Instance.GetChannel();
-        SendMessages("Test");
     }
     
     
@@ -28,24 +27,33 @@ public class RabbitQueueSender : IDisposable
             arguments: null);
     }*/
 
-    public void SendMessages(string[] messages)
+    public void SendToDrone(string[] messages)
     {
         foreach (var message in messages)
         {
             var body = Encoding.UTF8.GetBytes(message);
 
-            _channel.BasicPublish(exchange: "",  routingKey: RabbitMQPersistentConnection.Instance.GetQueueName(), body: body);
+            _channel.BasicPublish(exchange: RabbitMQPersistentConnection.Instance.ExchangeName,  routingKey: RabbitMQPersistentConnection.Instance.DroneRoutingKey, body: body);
 
             Console.WriteLine($"Sent: {message}");
         }
     }
-    public void SendMessages(string message)
+    public void SendToDrone(string message)
     {
         var body = Encoding.UTF8.GetBytes(message);
+        string exchangeName = RabbitMQPersistentConnection.Instance.ExchangeName;
+        _channel.BasicPublish(exchange: exchangeName, routingKey: RabbitMQPersistentConnection.Instance.DroneRoutingKey, body: body);
 
-        _channel.BasicPublish(exchange: string.Empty, routingKey: RabbitMQPersistentConnection.Instance.GetQueueName(), body: body);
+        Console.WriteLine($"Sent: {message} to {exchangeName} with routing key {RabbitMQPersistentConnection.Instance.DroneRoutingKey}");
+    }
 
-        Console.WriteLine($"Sent: {message}");
+    public void SendToCentral(string message)
+    {
+        var body = Encoding.UTF8.GetBytes(message);
+        string exchangeName = RabbitMQPersistentConnection.Instance.ExchangeNameZentral;
+        _channel.BasicPublish(exchange: exchangeName, routingKey: RabbitMQPersistentConnection.Instance.ZentralRoutingKey, body: body);
+
+        Console.WriteLine($"Sent: {message} to {exchangeName} with routing key {RabbitMQPersistentConnection.Instance.ZentralRoutingKey}");
     }
 
     public IModel GetChannel() => _channel;
