@@ -1,5 +1,7 @@
-﻿using System.Text;
+﻿using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
+using CentralService;
 using GlobalUsings;
 
 namespace MovementService;
@@ -11,6 +13,8 @@ public class Drone
     
     private RabbitMqSubscriber _subscriber;
     
+    private RabbitQueueSender _sender;
+    
     public string Name{ get; private set; } = "Drone";
     
     private static readonly HttpClient _httpClient = new HttpClient();
@@ -18,12 +22,12 @@ public class Drone
 
     public Drone()
     {
-        
+        _sender = new RabbitQueueSender();
     }
     public Drone(string name)
     {
         Name = name;
-        
+        _sender = new RabbitQueueSender();
         // finds a place to spawn
     }
 
@@ -31,6 +35,7 @@ public class Drone
     {
         Subscribe();
         CurrentPosition = await GetStartingPosition();
+        
     }
     public async Task MoveAsync()
     {
@@ -77,6 +82,19 @@ public class Drone
         else
         {
             Task.Delay(5000).Wait();
+        }
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                int newX = newPoint.x + dx;
+                int newY = newPoint.y + dy;
+
+                if (GoalPosition.x-newX >= -1 && GoalPosition.x-newX<=1 && GoalPosition.y-newY >= -1 && GoalPosition.x-newY<=1) // Ensure within bounds
+                {
+                    _sender.SendToCentral($"[Drone {Name}] Reached: {GoalPosition}");
+                }
+            }
         }
     }
     
@@ -142,23 +160,34 @@ public class Drone
             foreach (Point point in areaPoints)
             {
                 var resp = await _httpClient.GetAsync($"http://localhost:5150/location/free/?x={point.x}&y={point.y}&z={point.z+1}");
+                var content = new
+                {
+                    oldPosttion = new Point(),
+                    newPosttion = point
+                    
+                };
+
+                string data = JsonSerializer.Serialize(content, new JsonSerializerOptions { WriteIndented = true });
                 if (resp.IsSuccessStatusCode)
                 {
+                    await _httpClient.PutAsJsonAsync("http://localhost:5150/dynamicmap/point", data);
                     return point;
                 }
             }
             
-            round++;
             x = 100;
             y = 100;
             direction = (direction + 1) % 7;
+            if (direction == 0)
+            {
+                round+=3;
+            }
         }
         return startingPosition;
     }
 
     public void Subscribe() // wird am anfang schon gemacht wenn die drone erstellt wird, sie subsribt der queue
     {
-        //TODO MATTHI 
         _subscriber = new RabbitMqSubscriber(((sender, point) =>
         {
             try

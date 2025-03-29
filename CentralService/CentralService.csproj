@@ -30,6 +30,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\GlobalUsings\GlobalUsings.csproj" />
+      <ProjectReference Include="..\MovementService\MovementService.csproj" />
     </ItemGroup>
 
 </Project>
