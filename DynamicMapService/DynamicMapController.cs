@@ -7,7 +7,7 @@ namespace DynamicMapService
     public class DynamicMapController : Controller
     {
         
-        //TODO Schauen wie wir die ganzen Endpoints nennen, weil die Namen gehen so gar nicht
+        //TODO Schauen wie wair die ganzen Endpoints nennen, weil die Namen gehen so gar nicht
         private readonly DynamicMap _dynamicMap;
                 
 

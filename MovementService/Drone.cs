@@ -1,4 +1,6 @@
-﻿namespace MovementService;
+﻿using GlobalUsings;
+
+namespace MovementService;
 
 public class Drone
 {
