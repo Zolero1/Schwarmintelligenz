@@ -42,6 +42,7 @@ public class Drone
     }
     public async Task MoveAsync()
     {
+        Point newPoint = new Point();
         Console.WriteLine("Drone moving");
         while (true)
         {
@@ -53,13 +54,27 @@ public class Drone
                 
                 pointsList = pointsList
                     .Where(p => sealevelList.Any(s => s.x == p.x && s.y == p.y && s.z < p.z))
+                    .OrderBy(p => p.x).ThenBy(p => p.y)
                     .ToList();             
                 pointsList = pointsList.OrderBy(p => DistanceTo(p, GoalPosition)).ToList();
-                Point? newPoint = pointsList[0]; //= pointsList.SkipWhile(p => p.z <= sealevelList.First(s => s.x == p.x && s.y == p.y).z)
+                
+                
+                //= pointsList.SkipWhile(p => p.z <= sealevelList.First(s => s.x == p.x && s.y == p.y).z)
                     //.FirstOrDefault();
 
-                if (newPoint is not null)
+                if (pointsList.Count>0)
                 {
+                    newPoint = pointsList.First();
+                    if (newPoint.x == CurrentPosition.x && newPoint.y == CurrentPosition.y &&
+                        Math.Abs(GoalPosition.x-newPoint.x)<=-1 && Math.Abs(GoalPosition.y-newPoint.y)>=1)
+                    {
+                        newPoint = new Point()
+                        {
+                            x = CurrentPosition.x,
+                            y = CurrentPosition.y,
+                            z = CurrentPosition.z + 1
+                        };
+                    }
                     UpdateLocationDto updateLocation = new UpdateLocationDto()
                     {
                         OldPosition = CurrentPosition, // Assign the existing position
@@ -105,10 +120,10 @@ public class Drone
                             int newX = newPoint.x + dx;
                             int newY = newPoint.y + dy;
                             int newZ = newPoint.z + dz;
-
-                            if (GoalPosition.x - newX >= -1 && GoalPosition.x - newX <= 1 &&
-                                GoalPosition.y - newY >= -1 && GoalPosition.x - newY <= 1 && 
-                                GoalPosition.z - newZ <= 1 && GoalPosition.z - newZ >= -1) // Ensure within bounds
+                            
+                            if (Math.Abs(GoalPosition.x - newX) <= 1 &&
+                                Math.Abs(GoalPosition.y - newY) <= 1 && 
+                                Math.Abs(GoalPosition.z - newZ) <= 1) // Ensure within bounds
                             {
                                 _sender.SendToCentral($"[Drone {Name}] Reached: {GoalPosition}");
                                 Console.WriteLine($"[Drone {Name}] Reached: {GoalPosition}");
