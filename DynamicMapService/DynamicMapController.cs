@@ -78,7 +78,7 @@ namespace DynamicMapService
             return Ok();
         }
 
-        [HttpGet("/location/free")]
+        [HttpGet("/dynamicmap/freepoint")]
         public IActionResult GetFreeLocation([FromQuery] int x, [FromQuery] int y, [FromQuery] int z)
         {
             // Check bounds

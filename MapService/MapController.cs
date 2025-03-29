@@ -14,7 +14,7 @@ public class MapController : ControllerBase
         _map = map;
     }
 
-    [HttpGet("/static/sealevel")]
+    [HttpGet("/map/sealevels")]
     public IActionResult GetSeaLevelAround([FromQuery] int x, [FromQuery] int y)
     {
         // Validate bounds

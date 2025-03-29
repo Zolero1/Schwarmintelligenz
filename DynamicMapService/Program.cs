@@ -10,6 +10,8 @@ builder.Services.AddSingleton<DynamicMap>();
 builder.Services.AddSwaggerGen();
 
 
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

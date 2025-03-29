@@ -14,8 +14,11 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .Build();
 
+
+//TODO PANI Hier erstellen? 
 Drone d1 = new Drone("D1");
 await d1.Initialize();
+
 
 
 await host.RunAsync();

@@ -13,7 +13,7 @@ public class Drone
     
     public string Name{ get; private set; } = "Drone";
     
-    private static readonly HttpClient _httpClient = new HttpClient();
+    private readonly HttpClient _httpClient = new HttpClient();
     
 
     public Drone()
@@ -23,14 +23,22 @@ public class Drone
     public Drone(string name)
     {
         Name = name;
-        
         // finds a place to spawn
     }
 
+    // TODO PANI darf man den Service hier so rein knallen
     public async Task Initialize()
     {
         Subscribe();
         CurrentPosition = await GetStartingPosition();
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                await MoveAsync();
+                await Task.Delay(1000); // Avoid CPU overuse
+            }
+        });
     }
     public async Task MoveAsync()
     {
@@ -135,13 +143,13 @@ public class Drone
                 case 7: x-=round; y+=round; break; // NW
                 default: throw new ArgumentOutOfRangeException();
             }
-            var response = await _httpClient.GetAsync($"http://localhost:5117/static/sealevel?x={x}&y={y}");
+            var response = await _httpClient.GetAsync($"http://localhost:5117/map/sealevel?x={x}&y={y}");
             string jsonResponse = await response.Content.ReadAsStringAsync();
             areaPoints = JsonSerializer.Deserialize<List<Point>>(jsonResponse);
             
             foreach (Point point in areaPoints)
             {
-                var resp = await _httpClient.GetAsync($"http://localhost:5150/location/free/?x={point.x}&y={point.y}&z={point.z+1}");
+                var resp = await _httpClient.GetAsync($"http://localhost:5150/dynamicmap/free?x={point.x}&y={point.y}&z={point.z+1}");
                 if (resp.IsSuccessStatusCode)
                 {
                     return point;
@@ -175,7 +183,7 @@ public class Drone
         
     }
     
-    //TODO Wo soll man distance to hin tun? Point oder Drone? Wäre ja dumm wenn der punkt rausfinden soll wie weiter er zum kollegen hat
+    //TODO PANI Wo soll man distance to hin tun? Point oder Drone? Wäre ja dumm wenn der punkt rausfinden soll wie weiter er zum kollegen hat
     
     public double DistanceTo(Point other, Point goal)
     {
