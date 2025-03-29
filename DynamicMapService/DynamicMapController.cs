@@ -4,7 +4,7 @@ using GlobalUsings;
 
 namespace DynamicMapService
 {
-    public class DynamicMapController : Controller
+    public class DynamicMapController : ControllerBase
     {
         
         //TODO Schauen wie wair die ganzen Endpoints nennen, weil die Namen gehen so gar nicht

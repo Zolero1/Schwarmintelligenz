@@ -1,6 +1,7 @@
 ﻿using GlobalUsings;
-using MapService;
 using Microsoft.AspNetCore.Mvc;
+
+namespace MapService;
 
 [ApiController]
 [Route("[controller]")]
