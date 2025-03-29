@@ -34,7 +34,7 @@ public class MapController : ControllerBase
                 if (newX >= 0 && newX < 200 && newY >= 0 && newY < 200) // Ensure within bounds
                 {
                     int seaLevel = _map.MapArray[newX, newY];
-                    surroundingPoints.Add(new Point(){X = newX,Y = newY,Z =  seaLevel});
+                    surroundingPoints.Add(new Point(){x = newX,y = newY,z =  seaLevel});
                 }
             }
         }

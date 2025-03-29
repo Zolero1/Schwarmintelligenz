@@ -56,13 +56,13 @@ public class RabbitMqSubscriber : IDisposable
                     int X = int.Parse(coordinates[0]);
                     int Y = int.Parse(coordinates[1]);
                     int Z = int.Parse(coordinates[2]);
-                    if (X > 0 && Y > 0 && Z > 0 && X < 200 && Y < 200)
+                    if (X > 0 && Y > 0 && Z > 0 && X < 200 && Y < 200 && Z < 200)
                     {
                         var point = new Point
                         {
-                            X = X,
-                            Y = Y,
-                            Z = Z
+                            x = X,
+                            y = Y,
+                            z = Z
                         };
                         MessageReceived?.Invoke(this, point);
                     }

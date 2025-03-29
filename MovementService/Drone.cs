@@ -18,17 +18,19 @@ public class Drone
 
     public Drone()
     {
-        Subscribe();
-        //GetStartingPosition();
-        // finds a place to spawn
+        
     }
     public Drone(string name)
     {
-        
         Name = name;
-        Subscribe();
-        //GetStartingPosition();
+        
         // finds a place to spawn
+    }
+
+    public async Task Initialize()
+    {
+        Subscribe();
+        CurrentPosition = await GetStartingPosition();
     }
     public async Task MoveAsync()
     {
@@ -47,7 +49,7 @@ public class Drone
         pointsList = pointsList.OrderBy(p => DistanceTo(p, GoalPosition)).ToList();
         List<Point> sealevelList = await GetMapSealevelsAsync(); //alle seh höhen
          
-        Point? newPoint = pointsList.SkipWhile(p => p.Z <= sealevelList.First(s => s.X == p.X && s.Y == p.Y).Z).First();
+        Point? newPoint = pointsList.SkipWhile(p => p.z <= sealevelList.First(s => s.x == p.x && s.y == p.y).z).First();
 
         if (newPoint is not null)
         {
@@ -112,13 +114,51 @@ public class Drone
         
     
 
-    public Point GetStartingPosition()
+    public async Task<Point> GetStartingPosition()
     {
-        throw new NotImplementedException();
+        Point startingPosition = new Point();
+        int direction = 0;
+        int round = 0;
+        int x = 100, y = 100;
+        List<Point> areaPoints = new List<Point>();
+        while (startingPosition.x ==0 && startingPosition.y == 0 && startingPosition.z ==0)
+        {
+            switch (direction)
+            {
+                case 0: y+=round; break;    // N
+                case 1: x+=round; y+=round; break; // NE
+                case 2: x+=round; break;    // E
+                case 3: x+=round; y-=round; break; // SE
+                case 4: y-=round; break;    // S
+                case 5: x-=round; y-=round; break; // SW
+                case 6: x-=round; break;    // W
+                case 7: x-=round; y+=round; break; // NW
+                default: throw new ArgumentOutOfRangeException();
+            }
+            var response = await _httpClient.GetAsync($"http://localhost:5117/static/sealevel?x={x}&y={y}");
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+            areaPoints = JsonSerializer.Deserialize<List<Point>>(jsonResponse);
+            
+            foreach (Point point in areaPoints)
+            {
+                var resp = await _httpClient.GetAsync($"http://localhost:5150/location/free/?x={point.x}&y={point.y}&z={point.z+1}");
+                if (resp.IsSuccessStatusCode)
+                {
+                    return point;
+                }
+            }
+            
+            round++;
+            x = 100;
+            y = 100;
+            direction = (direction + 1) % 7;
+        }
+        return startingPosition;
     }
 
     public void Subscribe() // wird am anfang schon gemacht wenn die drone erstellt wird, sie subsribt der queue
     {
+        //TODO MATTHI 
         _subscriber = new RabbitMqSubscriber(((sender, point) =>
         {
             try
@@ -132,17 +172,17 @@ public class Drone
             }
         }));
         _subscriber.StartListening();
+        
     }
-    
     
     //TODO Wo soll man distance to hin tun? Point oder Drone? Wäre ja dumm wenn der punkt rausfinden soll wie weiter er zum kollegen hat
     
     public double DistanceTo(Point other, Point goal)
     {
         return Math.Sqrt(
-            Math.Pow(goal.X - other.X, 2) +
-            Math.Pow(goal.Y - other.Y, 2) +
-            Math.Pow(goal.Z - other.Z, 2)
+            Math.Pow(goal.x - other.x, 2) +
+            Math.Pow(goal.y - other.y, 2) +
+            Math.Pow(goal.z - other.z, 2)
         );
     }
     

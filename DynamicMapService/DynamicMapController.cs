@@ -43,7 +43,7 @@ namespace DynamicMapService
                         {
                             if (_dynamicMap.Map[newX, newY].Contains(newZ))
                             {
-                                surroundingPoints.Add(new Point() { X = newX, Y = newY, Z = newZ });
+                                surroundingPoints.Add(new Point() { x = newX, y = newY, z = newZ });
                             }
                         }
                     }
@@ -58,23 +58,23 @@ namespace DynamicMapService
         public IActionResult UpdateLocation([FromBody] UpdateLocationDto updateLocation)
         {
             // Validate new and old position coordinates
-            if (updateLocation.NewPosition.X < 0 || updateLocation.NewPosition.X >= 200 ||
-                updateLocation.NewPosition.Y < 0 || updateLocation.NewPosition.Y >= 200 ||
-                updateLocation.OldPosition.X < 0 || updateLocation.OldPosition.X >= 200 ||
-                updateLocation.OldPosition.Y < 0 || updateLocation.OldPosition.Y >= 200)
+            if (updateLocation.NewPosition.x < 0 || updateLocation.NewPosition.x >= 200 ||
+                updateLocation.NewPosition.y < 0 || updateLocation.NewPosition.y >= 200 ||
+                updateLocation.OldPosition.x < 0 || updateLocation.OldPosition.x >= 200 ||
+                updateLocation.OldPosition.y < 0 || updateLocation.OldPosition.y >= 200)
             {
                 return BadRequest("Coordinates are out of bounds.");
             }
 
 
             // Remove from the old position if it exists
-           if (_dynamicMap.Map[updateLocation.OldPosition.X, updateLocation.OldPosition.Y].Contains(updateLocation.OldPosition.Z)) //remove old position
+           if (_dynamicMap.Map[updateLocation.OldPosition.x, updateLocation.OldPosition.y].Contains(updateLocation.OldPosition.z)) //remove old position
             {
-                _dynamicMap.Map[updateLocation.OldPosition.X, updateLocation.OldPosition.Y].Remove(updateLocation.OldPosition.Z);
+                _dynamicMap.Map[updateLocation.OldPosition.x, updateLocation.OldPosition.y].Remove(updateLocation.OldPosition.z);
             }
 
             // Add 'z' to the new position
-            _dynamicMap.Map[updateLocation.NewPosition.X, updateLocation.NewPosition.Y].Add(updateLocation.NewPosition.Z);
+            _dynamicMap.Map[updateLocation.NewPosition.x, updateLocation.NewPosition.y].Add(updateLocation.NewPosition.z);
             return Ok();
         }
 
