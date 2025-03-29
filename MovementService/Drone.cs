@@ -8,12 +8,14 @@ namespace MovementService;
 
 public class Drone
 {
-    public Point CurrentPosition { get; set; }
-    public Point GoalPosition { get; set; }
+    public Point CurrentPosition { get; set; } = new Point(){x=100, y=100, z=70};
+    public Point? GoalPosition { get; set; }
     
     private RabbitMqSubscriber _subscriber;
     
     private RabbitQueueSender _sender;
+    
+    private bool goalReached = false;
     
     public string Name{ get; private set; } = "Drone";
     
@@ -35,77 +37,102 @@ public class Drone
     {
         Subscribe();
         CurrentPosition = await GetStartingPosition();
-        
+        await MoveAsync();
+
     }
     public async Task MoveAsync()
     {
-        // Request available positions from API
-        var availablePositions = await GetAvailablePositionsAsync();
-        if (availablePositions == null || availablePositions.Count == 0)
-            return;
-        
-        // Find the best next position
-        CurrentPosition = FindClosestPoint(GoalPosition, availablePositions);
-        
-        Console.WriteLine($"[Drone {Name}] Moved to: {CurrentPosition}");
-        
-        //schauen wo was frei ist 
-        List<Point> pointsList = await GetAvailablePositionsAsync();
-        pointsList = pointsList.OrderBy(p => DistanceTo(p, GoalPosition)).ToList();
-        List<Point> sealevelList = await GetMapSealevelsAsync(); //alle seh höhen
-         
-        Point? newPoint = pointsList.SkipWhile(p => p.z <= sealevelList.First(s => s.x == p.x && s.y == p.y).z).First();
-
-        if (newPoint is not null)
+        Console.WriteLine("Drone moving");
+        while (true)
         {
-            UpdateLocationDto updateLocation = new UpdateLocationDto()
+            if (GoalPosition != null && goalReached == false)
             {
-                OldPosition = CurrentPosition,  // Assign the existing position
-                NewPosition = newPoint         // Assign the new point
-            };
+                //schauen wo was frei ist 
+                List<Point?> pointsList = await GetAvailablePositionsAsync();
+                List<Point> sealevelList = await GetMapSealevelsAsync(); //alle seh höhen
+                
+                pointsList = pointsList
+                    .Where(p => sealevelList.Any(s => s.x == p.x && s.y == p.y && s.z < p.z))
+                    .ToList();             
+                pointsList = pointsList.OrderBy(p => DistanceTo(p, GoalPosition)).ToList();
+                Point? newPoint = pointsList[0]; //= pointsList.SkipWhile(p => p.z <= sealevelList.First(s => s.x == p.x && s.y == p.y).z)
+                    //.FirstOrDefault();
 
-
-            string json = JsonSerializer.Serialize(updateLocation);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            HttpResponseMessage response = await _httpClient.PutAsync("http://localhost:5150/dynamicmap/point", content);
-        
-            if (response.IsSuccessStatusCode)
-            {
-                Console.WriteLine("Location updated successfully!");
-            }
-            else
-            {
-                Console.WriteLine($"Error: {response.StatusCode}");
-            }
-        } // wenn man nirgends hin kann weil alles voll ist 
-        else
-        {
-            Task.Delay(5000).Wait();
-        }
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            for (int dy = -1; dy <= 1; dy++)
-            {
-                int newX = newPoint.x + dx;
-                int newY = newPoint.y + dy;
-
-                if (GoalPosition.x-newX >= -1 && GoalPosition.x-newX<=1 && GoalPosition.y-newY >= -1 && GoalPosition.x-newY<=1) // Ensure within bounds
+                if (newPoint is not null)
                 {
-                    _sender.SendToCentral($"[Drone {Name}] Reached: {GoalPosition}");
+                    UpdateLocationDto updateLocation = new UpdateLocationDto()
+                    {
+                        OldPosition = CurrentPosition, // Assign the existing position
+                        NewPosition = newPoint // Assign the new point
+                    };
+                    CurrentPosition = newPoint;
+                    Console.WriteLine($"[Drone {Name}] Moved to: {CurrentPosition}");
+
+
+                    string json = JsonSerializer.Serialize(updateLocation);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    HttpResponseMessage response =
+                        await _httpClient.PutAsync("http://localhost:5150/dynamicmap/point", content);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine("Location updated successfully!");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error: {response.StatusCode}");
+                    }
+                } // wenn man nirgends hin kann weil alles voll ist 
+                else
+                {
+                    Task.Delay(5000).Wait();
+                }
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (goalReached)
+                    {
+                        break;
+                    }
+                    for (int dz = -1; dz <= 1; dz++)
+                    {
+                        if (goalReached)
+                        {
+                            break;
+                        }
+                        for (int dy = -1; dy <= 1; dy++)
+                        {
+                            int newX = newPoint.x + dx;
+                            int newY = newPoint.y + dy;
+                            int newZ = newPoint.z + dz;
+
+                            if (GoalPosition.x - newX >= -1 && GoalPosition.x - newX <= 1 &&
+                                GoalPosition.y - newY >= -1 && GoalPosition.x - newY <= 1 && 
+                                GoalPosition.z - newZ <= 1 && GoalPosition.z - newZ >= -1) // Ensure within bounds
+                            {
+                                _sender.SendToCentral($"[Drone {Name}] Reached: {GoalPosition}");
+                                Console.WriteLine($"[Drone {Name}] Reached: {GoalPosition}");
+                                goalReached = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-    
-    
 
     private async Task<List<Point>> GetAvailablePositionsAsync()
     {
+        Console.WriteLine("Getting available positions");
         try
         {
-            var response = await _httpClient.GetStringAsync("http://localhost:5150/dynamicmap/freepoints");
-            return JsonSerializer.Deserialize<List<Point>>(response) ?? new List<Point>();
+            string requestUri =
+                $"http://localhost:5150/dynamicmap/freepoints?x={CurrentPosition.x}&y={CurrentPosition.y}&z={CurrentPosition.z}";
+            var response = await _httpClient.GetAsync(requestUri);
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+            List<Point> temp  = JsonSerializer.Deserialize<List<Point>>(jsonResponse) ?? new List<Point>();
+            return temp;
         }
         catch (Exception ex)
         {
@@ -116,9 +143,10 @@ public class Drone
     
     private async Task<List<Point>> GetMapSealevelsAsync()
     {
+        Console.WriteLine("Getting map sealevels");
         try
         {
-            var response = await _httpClient.GetStringAsync("http://localhost:5117/map/sealevels");
+            var response = await _httpClient.GetStringAsync($"http://localhost:5117/static/sealevel?x={CurrentPosition.x}&y={CurrentPosition.y}");
             return JsonSerializer.Deserialize<List<Point>>(response) ?? new List<Point>();
         }
         catch (Exception ex)
@@ -126,17 +154,15 @@ public class Drone
             Console.WriteLine($"[Drone {Name}] Error fetching available positions: {ex.Message}");
             return new List<Point>();
         }
+        
     }
-
-        
-        
     
-
-    public async Task<Point> GetStartingPosition()
+    private async Task<Point> GetStartingPosition()
     {
+        Console.WriteLine("Getting start position");
         Point startingPosition = new Point();
         int direction = 0;
-        int round = 0;
+        int round = 1;
         int x = 100, y = 100;
         List<Point> areaPoints = new List<Point>();
         while (startingPosition.x ==0 && startingPosition.y == 0 && startingPosition.z ==0)
@@ -160,19 +186,24 @@ public class Drone
             foreach (Point point in areaPoints)
             {
                 var resp = await _httpClient.GetAsync($"http://localhost:5150/location/free/?x={point.x}&y={point.y}&z={point.z+1}");
-                var content = new
+                if (resp.IsSuccessStatusCode)
                 {
-                    oldPosttion = new Point(),
-                    newPosttion = point
+                    return point;
+                }
+                UpdateLocationDto updateLocation = new UpdateLocationDto()
+                {
+                    OldPosition = new Point(),
+                    NewPosition = point
                     
                 };
 
-                string data = JsonSerializer.Serialize(content, new JsonSerializerOptions { WriteIndented = true });
-                if (resp.IsSuccessStatusCode)
-                {
-                    await _httpClient.PutAsJsonAsync("http://localhost:5150/dynamicmap/point", data);
-                    return point;
-                }
+                string json = JsonSerializer.Serialize(updateLocation);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                await _httpClient.PutAsync("http://localhost:5150/dynamicmap/point", content);                if (resp.IsSuccessStatusCode)
+                
+                return point;
+                
             }
             
             x = 100;
@@ -193,6 +224,7 @@ public class Drone
             try
             {
                 GoalPosition = point;
+                goalReached = false;
                 Console.WriteLine($"[Drone {Name}] has [{point.ToString()}] as New goal: {GoalPosition}");
             }
             catch (Exception ex)
