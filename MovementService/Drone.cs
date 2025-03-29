@@ -61,7 +61,7 @@ public class Drone
             string json = JsonSerializer.Serialize(updateLocation);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            HttpResponseMessage response = await _httpClient.PutAsync("https://your-api-url/dynamicmap/point", content);
+            HttpResponseMessage response = await _httpClient.PutAsync("http://localhost:5150/dynamicmap/point", content);
         
             if (response.IsSuccessStatusCode)
             {
