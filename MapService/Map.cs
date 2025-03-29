@@ -7,7 +7,7 @@ namespace MapService
     {
         public T[,] MapArray { get; set; } = new T[200, 200];
 
-        public const string filePath = "map.csv"; // Ensure a valid file path is given
+        public const string filePath = "Map.csv";
 
         public Func<string, T> ConvertFunction { get; set; }
 
@@ -17,11 +17,11 @@ namespace MapService
             
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                LoadMapFromCSV(filePath);
+                LoadMapFromCSV();
             }
         }
 
-        private void LoadMapFromCSV(string filePath)
+        private void LoadMapFromCSV()
         {
             string[] lines = File.ReadAllLines(filePath);
             for (int i = 0; i < Math.Min(200, lines.Length); i++)

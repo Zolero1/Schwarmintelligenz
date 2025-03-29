@@ -1,10 +1,11 @@
-﻿using MovementService;
+﻿using GlobalUsings;
+using MovementService;
 
 namespace DynamicMapService;
 
-public record updateLocationDto
+public record UpdateLocationDto
 {
-    public Point newPosition { get; set; }
+    public required Point NewPosition { get; set; }
     
-    public Point oldPosition { get; set; }
+    public required Point OldPosition { get; set; }
 }
