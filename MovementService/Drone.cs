@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using CentralService;
 using GlobalUsings;
 
 namespace MovementService;
@@ -8,20 +9,20 @@ public class Drone
 {
     public Point CurrentPosition { get; set; }
     public Point GoalPosition { get; set; }
-
+    
     private RabbitMqSubscriber _subscriber;
+    
+    private RabbitQueueSender _sender;
+    
+    private bool goalReached = false;
 
+    
     public string Name { get; private set; } = "Drone";
-
-    private static readonly HttpClient _httpClient = new HttpClient();
-
-
-    public Drone(string name)
-    {
-        Name = name;
-    }
-
-    //TODO MATTHI - was spricht dagegen das in den Konstruktor zu tun
+    private readonly HttpService _httpService = new HttpService();
+    
+    public Drone() {}
+    public Drone(string name) => Name = name;
+    
     public async Task Initialize()
     {
         Subscribe();
@@ -35,123 +36,103 @@ public class Drone
             }
         });
     }
-
+    
     public async Task MoveAsync()
     {
         var availablePositions = await _httpService.GetAvailablePositionsAsync();
         if (availablePositions.Count == 0) return;
-
+        
         var sealevelList = await _httpService.GetMapSealevelsAsync();
         var pointsList = availablePositions.OrderBy(p => p.DistanceTo(GoalPosition)).ToList();
-
-        var newPoint =
-            pointsList.FirstOrDefault(p => p.z > sealevelList.FirstOrDefault(s => s.x == p.x && s.y == p.y)?.z);
+        
+        var newPoint = pointsList.FirstOrDefault(p => p.z > sealevelList.FirstOrDefault(s => s.x == p.x && s.y == p.y)?.z);
         if (newPoint != null)
         {
             var updateLocation = new UpdateLocationDto { OldPosition = CurrentPosition, NewPosition = newPoint };
             await _httpService.UpdateLocationAsync(updateLocation);
             CurrentPosition = newPoint;
+
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (goalReached)
+                {
+                    break;
+                }
+
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    if (goalReached)
+                    {
+                        break;
+                    }
+
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        int newX = newPoint.x + dx;
+                        int newY = newPoint.y + dy;
+                        int newZ = newPoint.z + dz;
+
+                        if (Math.Abs(GoalPosition.x - newX) <= 1 &&
+                            Math.Abs(GoalPosition.y - newY) <= 1 &&
+                            Math.Abs(GoalPosition.z - newZ) <= 1) // Ensure within bounds
+                        {
+                            _sender.SendToCentral($"[Drone {Name}] Reached: {GoalPosition}");
+                            Console.WriteLine($"[Drone {Name}] Reached: {GoalPosition}");
+                            goalReached = true;
+                            break;
+                        }
+                    }
+                }
+            }
         }
         else
         {
             await Task.Delay(5000);
         }
     }
-
-
-
-
-
-    public async Task<Point> GetStartingPosition()
+    
+    private async Task<Point> GetStartingPositionAsync()
     {
-        Point startingPosition = new Point();
-        int direction = 0;
-        int round = 0;
-        int x = 100, y = 100;
-        List<Point> areaPoints = new List<Point>();
-        while (startingPosition.x == 0 && startingPosition.y == 0 && startingPosition.z == 0)
+        int x = 100, y = 100, direction = 0, round = 0;
+        while (true)
         {
-            switch (direction)
+            (x, y) = GetNextCoordinates(x, y, direction, round);
+            var areaPoints = await _httpService.GetSealevelAtAsync(x, y);
+            
+            foreach (var point in areaPoints)
             {
-                case 0: y += round; break; // N
-                case 1:
-                    x += round;
-                    y += round;
-                    break; // NE
-                case 2: x += round; break; // E
-                case 3:
-                    x += round;
-                    y -= round;
-                    break; // SE
-                case 4: y -= round; break; // S
-                case 5:
-                    x -= round;
-                    y -= round;
-                    break; // SW
-                case 6: x -= round; break; // W
-                case 7:
-                    x -= round;
-                    y += round;
-                    break; // NW
-                default: throw new ArgumentOutOfRangeException();
-            }
-
-            var response = await _httpClient.GetAsync($"http://localhost:5117/static/sealevel?x={x}&y={y}");
-            string jsonResponse = await response.Content.ReadAsStringAsync();
-            areaPoints = JsonSerializer.Deserialize<List<Point>>(jsonResponse);
-
-            foreach (Point point in areaPoints)
-            {
-                var resp = await _httpClient.GetAsync(
-                    $"http://localhost:5150/location/free/?x={point.x}&y={point.y}&z={point.z + 1}");
-                if (resp.IsSuccessStatusCode)
+                if (await _httpService.IsPositionFreeAsync(point.x, point.y, point.z + 1))
                 {
                     return point;
                 }
             }
-
+            
             round++;
-            x = 100;
-            y = 100;
-            direction = (direction + 1) % 7;
+            direction = (direction + 1) % 8;
         }
-
-        return startingPosition;
     }
-
-    private static (int x, int y) GetNextCoordinates(int x, int y, int direction, int round) => direction switch
+    
+    private static (int , int) GetNextCoordinates(int x, int y, int direction, int round) => direction switch
     {
-
-        {
-            0 => (x, y + round), // N
+        0 => (x, y + round),    // N
         1 => (x + round, y + round), // NE
-        2 => (x + round, y), // E
+        2 => (x + round, y),    // E
         3 => (x + round, y - round), // SE
-        4 => (x, y - round), // S
+        4 => (x, y - round),    // S
         5 => (x - round, y - round), // SW
-        6 => (x - round, y), // W
+        6 => (x - round, y),    // W
         7 => (x - round, y + round), // NW
         _ => throw new ArgumentOutOfRangeException()
     };
-}
     
-public void Subscribe()
-{
-
-//TODO MATTHI 
-        _subscriber = new RabbitMqSubscriber(((sender, point) =>
+    public void Subscribe()
+    {
+        _subscriber = new RabbitMqSubscriber((sender, point) =>
         {
-            try
-            {
-                GoalPosition = point;
-                Console.WriteLine($"[Drone {Name}] has [{point.ToString()}] as New goal: {GoalPosition}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Drone {Name}] has[{point.ToString()}] Error parsing position: {ex.Message}");
-            }
-        }));
+            GoalPosition = point;
+            Console.WriteLine($"[Drone {Name}] New goal: {GoalPosition}");
+        });
         _subscriber.StartListening();
-        
     }
 }
+
