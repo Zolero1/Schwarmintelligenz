@@ -40,7 +40,7 @@ namespace DynamicMapService
                             newY >= 0 && newY < 200 &&
                             newZ >= 0 && newZ < 200) // Ensure within bounds
                         {
-                            if (_dynamicMap.Map[newX, newY].Contains(newZ))
+                            if (!_dynamicMap.Map[newX, newY].Contains(newZ))
                             {
                                 surroundingPoints.Add(new Point() { x = newX, y = newY, z = newZ });
                             }

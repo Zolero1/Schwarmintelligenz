@@ -40,6 +40,10 @@ public class RabbitQueueSender : IDisposable
     }
     public void SendToDrone(string message)
     {
+        if (message == "start")
+        {
+            return;
+        }
         var body = Encoding.UTF8.GetBytes(message);
         string exchangeName = RabbitMQPersistentConnection.Instance.ExchangeName;
         _channel.BasicPublish(exchange: exchangeName, routingKey: RabbitMQPersistentConnection.Instance.DroneRoutingKey, body: body);
