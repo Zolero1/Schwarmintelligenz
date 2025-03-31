@@ -17,4 +17,15 @@ public class Point
     }
 
     public override string ToString() => $"X:{x}, Y:{y}, Z:{z}";
+    
+        
+    public double DistanceTo(Point goal)
+    {
+        return Math.Sqrt(
+            Math.Pow(goal.x - this.x, 2) +
+            Math.Pow(goal.y - this.y, 2) +
+            Math.Pow(goal.z - this.z, 2)
+        );
+    }
+    
 }

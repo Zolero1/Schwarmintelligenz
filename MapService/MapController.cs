@@ -13,9 +13,11 @@ public class MapController : ControllerBase
     {
         _map = map;
     }
-
+    
+    //TODO Alles async machen + rückgabe param 
+    // TODO MATTHI anschauen 
     [HttpGet("/map/sealevels")]
-    public IActionResult GetSeaLevelAround([FromQuery] int x, [FromQuery] int y)
+    public async Task<IActionResult> GetSeaLevelAround([FromQuery] int x, [FromQuery] int y)
     {
         // Validate bounds
         if (x < 0 || x >= 200 || y < 0 || y >= 200)

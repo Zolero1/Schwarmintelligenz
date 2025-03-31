@@ -6,7 +6,6 @@ namespace DynamicMapService
 {
     public class DynamicMapController : ControllerBase
     {
-        
         //TODO Schauen wie wair die ganzen Endpoints nennen, weil die Namen gehen so gar nicht
         private readonly DynamicMap _dynamicMap;
                 
@@ -54,8 +53,8 @@ namespace DynamicMapService
             return Ok(surroundingPoints);
         }
 
-        [HttpPut("/dynamicmap/point")]
-        public IActionResult UpdateLocation([FromBody] UpdateLocationDto updateLocation)
+        [HttpPut("/dynamicmap/points")]
+        public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationDto updateLocation)
         {
             // Validate new and old position coordinates
             if (updateLocation.NewPosition.x < 0 || updateLocation.NewPosition.x >= 200 ||
@@ -78,8 +77,8 @@ namespace DynamicMapService
             return Ok();
         }
 
-        [HttpGet("/dynamicmap/freepoint")]
-        public IActionResult GetFreeLocation([FromQuery] int x, [FromQuery] int y, [FromQuery] int z)
+        [HttpGet("/dynamicmap/freepoints/isfree")]
+        public async Task<ActionResult<bool>> GetFreeLocationAsync([FromQuery] int x, [FromQuery] int y, [FromQuery] int z)
         {
             // Check bounds
             if (x < 0 || x >= 200 || y < 0 || y >= 200)
@@ -87,18 +86,15 @@ namespace DynamicMapService
                 return BadRequest("Coordinates are out of bounds.");
             }
 
-            // Get the list of items at the specified location
-            var locationList = _dynamicMap.Map[x, y];
+            return await Task.Run(() =>
+            {
+                // Get the list of items at the specified location
+                var locationList = _dynamicMap.Map[x, y];
 
-            // Check if the list contains 'z'
-            if (locationList.Contains(z))
-            {
-                return Ok("Location is not free.");
-            }
-            else
-            {
-                return Ok("Location is free.");
-            }
+                // Return true if the location is free, otherwise false
+                return Ok(!locationList.Contains(z));
+            });
         }
+
     }
 }
