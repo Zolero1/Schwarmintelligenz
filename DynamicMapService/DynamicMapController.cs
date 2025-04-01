@@ -4,12 +4,12 @@ using GlobalUsings;
 
 namespace DynamicMapService
 {
+    [ApiController]
+    [Route("/dynamicmap/[controller]")]
     public class DynamicMapController : ControllerBase
     {
-        //TODO Schauen wie wair die ganzen Endpoints nennen, weil die Namen gehen so gar nicht
-        private readonly DynamicMap _dynamicMap;
+          private readonly DynamicMap _dynamicMap;
                 
-
         // Dependency Injection for DynamicMap (Singleton)
         public DynamicMapController(DynamicMap dynamicMap)
         {
@@ -17,8 +17,8 @@ namespace DynamicMapService
         }
 
 
-        [HttpGet("/dynamicmap/freepoints")]
-        public IActionResult GetFreePoints([FromQuery] int x, [FromQuery] int y, [FromQuery] int z)
+        [HttpGet("/freepoints")]
+        public ActionResult GetFreePoints([FromQuery] int x, [FromQuery] int y, [FromQuery] int z)
         {
             // Validate bounds
             if (x < 0 || x >= 200 || y < 0 || y >= 200)
@@ -53,8 +53,8 @@ namespace DynamicMapService
             return Ok(surroundingPoints);
         }
 
-        [HttpPut("/dynamicmap/points")]
-        public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationDto updateLocation)
+        [HttpPut("/points")]
+        public async Task<ActionResult> UpdateLocation([FromBody] UpdateLocationDto updateLocation)
         {
             // Validate new and old position coordinates
             if (updateLocation.NewPosition.x < 0 || updateLocation.NewPosition.x >= 200 ||
@@ -77,7 +77,7 @@ namespace DynamicMapService
             return Ok();
         }
 
-        [HttpGet("/dynamicmap/freepoints/isfree")]
+        [HttpGet("/freepoints/isfree")]
         public async Task<ActionResult<bool>> GetFreeLocationAsync([FromQuery] int x, [FromQuery] int y, [FromQuery] int z)
         {
             // Check bounds

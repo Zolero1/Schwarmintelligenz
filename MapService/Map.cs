@@ -6,9 +6,8 @@ namespace MapService
     public class Map<T>
     {
         public T[,] MapArray { get; set; } = new T[200, 200];
-
         
-        //TODO Erde flach machen 
+        //TODO Erde flach machen
         public const string filePath = "Map.csv";
 
         public Func<string, T> ConvertFunction { get; set; }
@@ -19,7 +18,7 @@ namespace MapService
             
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                
+                LoadMapFromCSV();
             }
         }
         
