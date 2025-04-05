@@ -10,15 +10,21 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<Map<int>>(provider => new Map<int>(int.Parse));
 
+builder.Services.AddSwaggerGen();
+
 
 
 var app = builder.Build();
 
+
+app.MapControllers();
+
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+
+app.MapOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI();
+
 
 app.UseHttpsRedirection();
 app.Run();

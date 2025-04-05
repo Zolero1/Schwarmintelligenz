@@ -31,7 +31,10 @@ public class Drone
         {
             while (true)
             {
-                await MoveAsync();
+                if (GoalPosition is not null && !goalReached)
+                {
+                    await MoveAsync();
+                }
                 await Task.Delay(1000);
             }
         });
@@ -39,10 +42,10 @@ public class Drone
     
     public async Task MoveAsync()
     {
-        var availablePositions = await _httpService.GetAvailablePositionsAsync();
+        var availablePositions = await _httpService.GetAvailablePositionsAsync(CurrentPosition.x, CurrentPosition.y,CurrentPosition.z);
         if (availablePositions.Count == 0) return;
         
-        var sealevelList = await _httpService.GetMapSealevelsAsync();
+        var sealevelList = await _httpService.GetMapSealevelsAsync(CurrentPosition.x, CurrentPosition.y);
         var pointsList = availablePositions.OrderBy(p => p.DistanceTo(GoalPosition)).ToList();
         
         var newPoint = pointsList.FirstOrDefault(p => p.z > sealevelList.FirstOrDefault(s => s.x == p.x && s.y == p.y)?.z);
@@ -50,39 +53,12 @@ public class Drone
         {
             var updateLocation = new UpdateLocationDto { OldPosition = CurrentPosition, NewPosition = newPoint };
             await _httpService.UpdateLocationAsync(updateLocation);
+            Console.WriteLine($"[Drone {Name}] Moved from {CurrentPosition} to {newPoint}");
             CurrentPosition = newPoint;
-
-            for (int dx = -1; dx <= 1; dx++)
+            if (newPoint.DistanceTo(GoalPosition) < 2)
             {
-                if (goalReached)
-                {
-                    break;
-                }
-
-                for (int dz = -1; dz <= 1; dz++)
-                {
-                    if (goalReached)
-                    {
-                        break;
-                    }
-
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        int newX = newPoint.x + dx;
-                        int newY = newPoint.y + dy;
-                        int newZ = newPoint.z + dz;
-
-                        if (Math.Abs(GoalPosition.x - newX) <= 1 &&
-                            Math.Abs(GoalPosition.y - newY) <= 1 &&
-                            Math.Abs(GoalPosition.z - newZ) <= 1) // Ensure within bounds
-                        {
-                            _sender.SendToCentral($"[Drone {Name}] Reached: {GoalPosition}");
-                            Console.WriteLine($"[Drone {Name}] Reached: {GoalPosition}");
-                            goalReached = true;
-                            break;
-                        }
-                    }
-                }
+                goalReached = true;
+                Console.WriteLine($"[Drone {Name}] Goal Reached");
             }
         }
         else
@@ -97,7 +73,7 @@ public class Drone
         while (true)
         {
             (x, y) = GetNextCoordinates(x, y, direction, round);
-            var areaPoints = await _httpService.GetSealevelAtAsync(x, y);
+            var areaPoints = await _httpService.GetMapSealevelsAsync(x, y);
             
             foreach (var point in areaPoints)
             {
@@ -130,6 +106,7 @@ public class Drone
         _subscriber = new RabbitMqSubscriber((sender, point) =>
         {
             GoalPosition = point;
+            goalReached = false;
             Console.WriteLine($"[Drone {Name}] New goal: {GoalPosition}");
         });
         _subscriber.StartListening();

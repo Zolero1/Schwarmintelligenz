@@ -19,7 +19,7 @@ namespace MapService
             
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                
+                LoadMapFromCSV();   
             }
         }
         

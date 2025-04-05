@@ -73,13 +73,13 @@ public class RabbitMqSubscriber : IDisposable
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Keine Int Werte eingegeben");
+                    Console.WriteLine("[Consumer] Keine Int Werte eingegeben");
                     throw;
                 }
             }
             else
             {
-                Console.WriteLine($"Invalid message format: {message}");
+                Console.WriteLine($"[Consumer] Invalid message format: {message}");
             }
         };
         

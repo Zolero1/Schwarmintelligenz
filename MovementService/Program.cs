@@ -14,11 +14,4 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .Build();
 
-// TODO MATTHI - das in den Central auslagern
-//TODO PANI Hier erstellen? -- in die zentrale auslagern 
-Drone d1 = new Drone("D1");
-await d1.Initialize();
-
-
-
 await host.RunAsync();

@@ -2,7 +2,7 @@ using System.Text;
 using GlobalUsings;
 using RabbitMQ.Client;
 
-namespace CentralService;
+namespace GlobalUsings;
 
 public class RabbitQueueSender : IDisposable
 {
@@ -35,20 +35,21 @@ public class RabbitQueueSender : IDisposable
 
             _channel.BasicPublish(exchange: RabbitMQPersistentConnection.Instance.ExchangeName,  routingKey: RabbitMQPersistentConnection.Instance.DroneRoutingKey, body: body);
 
-            Console.WriteLine($"Sent: {message}");
+            Console.WriteLine($"[Central] Sent: {message}");
         }
     }
-    public void SendToDrone(string message)
+    public int SendToDrone(string message)
     {
         if (message == "start")
         {
-            return;
+            return 1;
         }
         var body = Encoding.UTF8.GetBytes(message);
         string exchangeName = RabbitMQPersistentConnection.Instance.ExchangeName;
         _channel.BasicPublish(exchange: exchangeName, routingKey: RabbitMQPersistentConnection.Instance.DroneRoutingKey, body: body);
 
-        Console.WriteLine($"Sent: {message} to {exchangeName} with routing key {RabbitMQPersistentConnection.Instance.DroneRoutingKey}");
+        Console.WriteLine($"[Central] Sent: {message} to {exchangeName} with routing key {RabbitMQPersistentConnection.Instance.DroneRoutingKey}");
+        return 0;
     }
 
     public void SendToCentral(string message)
@@ -57,7 +58,7 @@ public class RabbitQueueSender : IDisposable
         string exchangeName = RabbitMQPersistentConnection.Instance.ExchangeNameZentral;
         _channel.BasicPublish(exchange: exchangeName, routingKey: RabbitMQPersistentConnection.Instance.ZentralRoutingKey, body: body);
 
-        Console.WriteLine($"Sent: {message} to {exchangeName} with routing key {RabbitMQPersistentConnection.Instance.ZentralRoutingKey}");
+        Console.WriteLine($"[Drone] Sent: {message} to {exchangeName} with routing key {RabbitMQPersistentConnection.Instance.ZentralRoutingKey}");
     }
 
     public IModel GetChannel() => _channel;

@@ -1,4 +1,6 @@
-namespace MovementService;
+using MovementService;
+
+namespace CentralService;
 
 public static class DroneManager
 {

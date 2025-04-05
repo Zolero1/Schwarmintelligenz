@@ -29,7 +29,7 @@ public class RabbitMqReceiver : IDisposable
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
-            Console.WriteLine($" [Central] has received: {message}");
+            Console.WriteLine($"[Central] Message received: {message}");
         };
         _channel.BasicConsume(
             queue: RabbitMQPersistentConnection.Instance.QueueNameZentral,
